@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Toad NFT Mint</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Toad NFT Mint</h1>
+    <button id="connectBtn">Connect Wallet</button>
+  </header>
+
+  <main>
+    <img src="preview.png" alt="NFT Preview" id="preview" />
+    
+    <div class="mint-controls">
+      <input type="number" id="quantity" value="1" min="1" max="50"/>
+      <button onclick="mintNFT('public')">Public Mint</button>
+      <button onclick="mintNFT('whitelist')">Whitelist Mint</button>
+    </div>
+
+    <p id="status"></p>
+    <p id="mintedCount"></p>
+  </main>
+
+  <footer>Base Sepolia | Powered by Toad NFT</footer>
+
+  <script>
+    const connectBtn = document.getElementById("connectBtn");
+    const status = document.getElementById("status");
+    const mintedCount = document.getElementById("mintedCount");
+
+    let account;
+    let signer;
+    let contract;
+
+    const CONTRACT_ADDRESS = "0x29eDB8277A8EEd8fA2B4256AA95C5354995690cE";
+
+    const CONTRACT_ABI = YOUR_ABI_HERE; // Replace this with the full ABI array you posted
+
+    connectBtn.addEventListener("click", async () => {
+      if (window.ethereum) {
+        const [selected] = await window.ethereum.request({ method: "eth_requestAccounts" });
+        account = selected;
+        connectBtn.textContent = `${account.slice(0, 6)}...${account.slice(-4)}`;
+        initEthers();
+      } else {
+        alert("MetaMask not found");
+      }
+    });
+
+    async function initEthers() {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      const totalMinted = await contract.totalMinted();
+      mintedCount.textContent = `✅ Total Minted: ${totalMinted.toString()} / 100`;
+    }
+
+    async function mintNFT(type) {
+      try {
+        const quantity = parseInt(document.getElementById("quantity").value);
+        let tx;
+
+        if (type === "public") {
+          const price = ethers.parseEther("0.0001") * BigInt(quantity);
+          tx = await contract.publicMint(quantity, { value: price });
+        } else {
+          tx = await contract.whitelistMint(quantity);
+        }
+
+        status.textContent = "⏳ Minting...";
+        await tx.wait();
+        status.textContent = "✅ Mint successful!";
+
+        const totalMinted = await contract.totalMinted();
+        mintedCount.textContent = `✅ Total Minted: ${totalMinted.toString()} / 100`;
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Mint failed.";
+      }
+    }
+  </script>
+</body>
+</html>
